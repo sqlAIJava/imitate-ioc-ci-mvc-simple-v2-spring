@@ -1,9 +1,6 @@
 package com.sqlong.framework.servlet;
 
-import com.sqlong.framework.annotation.SqlongAutowired;
-import com.sqlong.framework.annotation.SqlongController;
-import com.sqlong.framework.annotation.SqlongRequestMapping;
-import com.sqlong.framework.annotation.SqlongService;
+import com.sqlong.framework.annotation.*;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -13,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -68,8 +66,39 @@ public class SqlongDispatcherServlet extends HttpServlet {
         // 反射拿方法所在的类名
         String beanName = toLowerFirstCase(method.getDeclaringClass().getSimpleName());
 
+        // 形参列表
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        // 实参列表
+        Object[] paramValues = new Object[parameterTypes.length];
+
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Class<?> parameterType = parameterTypes[i];
+            if (parameterType == HttpServletRequest.class) {
+                paramValues[i] = req;
+            } else if (parameterType == HttpServletResponse.class) {
+                paramValues[i] = resp;
+            } else if (parameterType == String.class) {
+                // 参数注解无法从参数类型（非运行时的）getAnnotation，需要从方法（运行时的）getParameterAnnotations();
+                // SqlongRequestParam sqlongRequestParam = (SqlongRequestParam) parameterType.getAnnotation(SqlongRequestParam.class);
+                Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+                for (int j = 0; j < parameterAnnotations.length; j++) {
+                    for(Annotation a : parameterAnnotations[j]) {
+                        if (a instanceof SqlongRequestParam) {
+                            String paramName = ((SqlongRequestParam) a).value().trim();
+                            if (!"".equals(paramName)) {
+                                String paramValue = Arrays.toString(params.get(paramName))
+                                        .replaceAll("\\[|\\]", "")
+                                        .replaceAll("\\s", ",");
+                                paramValues[i] = paramValue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // 执行方法
-        method.invoke(ioc.get(beanName), req, resp, params.get("sp")[0]);
+        method.invoke(ioc.get(beanName), paramValues);
     }
 
     @Override
