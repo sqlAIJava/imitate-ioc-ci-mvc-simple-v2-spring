@@ -6,7 +6,7 @@ import com.sqlong.framework.annotation.SqlongService;
 public class ShowService {
 
     public String add(String i) {
-        return i + "| service |";
+        return i + " | service |";
     }
 
 }

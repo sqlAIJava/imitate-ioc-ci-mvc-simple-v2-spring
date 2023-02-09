@@ -23,7 +23,7 @@ public class ShowController {
         String r = showService.add(sp);
         System.out.println("处理后的sp：" + r);
         r += "| controller |";
-        response.getWriter().print(r);
+        response.getWriter().write(r);
     }
 
 }
